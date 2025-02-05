@@ -1,0 +1,46 @@
+import random
+import re
+
+# Define some basic rule-based responses
+responses = {
+    "hello": ["Hi there!", "Hello!", "Hey! How can I help you?"],
+    "how are you": ["I'm just a bot, but I'm doing great!", "I'm fine, thanks for asking!"],
+    "bye": ["Goodbye!", "See you later!", "Take care!"],
+    "your name": ["I'm a chatbot created using basic Python!", "I don't have a name, but you can call me ChatBot!"]
+}
+
+# Function to clean and preprocess user input
+def preprocess_text(text):
+    text = text.lower()
+    text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation
+    words = text.split()
+    return words
+
+# Rule-based response function
+def rule_based_response(user_input):
+    for key in responses.keys():
+        if key in user_input:
+            return random.choice(responses[key])
+    return None
+
+# Main chatbot function
+def chatbot():
+    print("Chatbot: Hello! How can I assist you? (Type 'exit' to stop)")
+    while True:
+        user_input = input("You: ").lower()
+        if user_input == "exit":
+            print("Chatbot: Goodbye! Have a great day!")
+            break
+
+        # Rule-based response
+        response = rule_based_response(user_input)
+        if response:
+            print(f"Chatbot: {response}")
+            continue
+
+        # If no response is found
+        print("Chatbot: I'm not sure about that. Can you ask me something else?")
+
+# Run the chatbot
+if __name__ == "__main__":
+    chatbot()

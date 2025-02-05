@@ -1,0 +1,131 @@
+import nltk
+import spacy
+import random
+import re
+import requests
+import json
+from nltk.tokenize import word_tokenize
+from nltk.classify import NaiveBayesClassifier
+from nltk.corpus import stopwords
+
+# Download necessary NLTK datasets
+nltk.download('punkt')
+nltk.download('stopwords')
+
+# Load spaCy NLP model
+nlp = spacy.load("en_core_web_sm")
+
+# Define some basic rule-based responses
+responses = {
+    "hello": ["Hi there!", "Hello!", "Hey! How can I help you?"],
+    "how are you": ["I'm just a bot, but I'm doing great!", "I'm fine, thanks for asking!"],
+    "bye": ["Goodbye!", "See you later!", "Take care!"],
+    "your name": ["I'm a chatbot created using NLTK and spaCy!", "I don't have a name, but you can call me ChatBot!"]
+}
+
+# Function to clean and preprocess user input
+def preprocess_text(text):
+    text = text.lower()
+    text = re.sub(r'[^\w\s]', '', text)  # Remove punctuation
+    words = word_tokenize(text)
+    words = [word for word in words if word not in stopwords.words('english')]  # Remove stopwords
+    return words
+
+# Rule-based response function
+def rule_based_response(user_input):
+    for key in responses.keys():
+        if key in user_input:
+            return random.choice(responses[key])
+    return None
+
+# Function to fetch weather data from OpenWeatherMap API
+def get_weather(city):
+    API_KEY = "your_openweathermap_api_key"  # Replace with your actual API key
+    url = f"http://api.openweathermap.org/data/2.5/weather?q={city}&appid={API_KEY}&units=metric"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        temp = data['main']['temp']
+        weather = data['weather'][0]['description']
+        return f"The current temperature in {city} is {temp}°C with {weather}."
+    else:
+        return "Sorry, I couldn't fetch the weather for that location."
+
+# Training a simple chatbot using NLTK's Naive Bayes Classifier
+training_data = [
+    ("hello", "greeting"),
+    ("hi", "greeting"),
+    ("hey", "greeting"),
+    ("how are you", "greeting"),
+    ("bye", "farewell"),
+    ("goodbye", "farewell"),
+    ("see you later", "farewell"),
+    ("what is your name", "name"),
+    ("who are you", "name"),
+    ("what can you do", "capabilities"),
+    ("tell me about yourself", "capabilities"),
+]
+
+# Preparing data for training
+train_set = [(word_tokenize(text.lower()), intent) for text, intent in training_data]
+
+# Define feature extraction function
+def extract_features(words):
+    return {word: True for word in words}
+
+train_features = [(extract_features(words), intent) for words, intent in train_set]
+
+# Train the Naive Bayes Classifier
+classifier = NaiveBayesClassifier.train(train_features)
+
+# Function to detect named entities using spaCy
+def extract_entities(text):
+    doc = nlp(text)
+    entities = {ent.text: ent.label_ for ent in doc.ents}
+    return entities
+
+# Main chatbot function
+def chatbot():
+    print("Chatbot: Hello! How can I assist you? (Type 'exit' to stop)")
+    while True:
+        user_input = input("You: ").lower()
+        if user_input == "exit":
+            print("Chatbot: Goodbye! Have a great day!")
+            break
+
+        # Check for weather query
+        if "weather in" in user_input:
+            city = user_input.split("weather in")[-1].strip()
+            print(f"Chatbot: {get_weather(city)}")
+            continue
+
+        # Rule-based response
+        response = rule_based_response(user_input)
+        if response:
+            print(f"Chatbot: {response}")
+            continue
+
+        # Machine learning-based response
+        words = word_tokenize(user_input)
+        features = extract_features(words)
+        intent = classifier.classify(features)
+        
+        if intent == "greeting":
+            print("Chatbot: Hello! How can I assist you?")
+        elif intent == "farewell":
+            print("Chatbot: Goodbye! Have a nice day!")
+        elif intent == "name":
+            print("Chatbot: I'm a chatbot created using NLTK and spaCy!")
+        elif intent == "capabilities":
+            print("Chatbot: I can answer your questions, fetch weather updates, and have a friendly conversation!")
+        else:
+            # Named Entity Recognition (NER) using spaCy
+            entities = extract_entities(user_input)
+            if entities:
+                print(f"Chatbot: I detected these entities: {entities}")
+            else:
+                print("Chatbot: I'm not sure about that. Can you ask me something else?")
+
+# Run the chatbot
+if __name__ == "__main__":
+    chatbot()
